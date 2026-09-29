@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "9800:9800"
+    volumes:
+      - curtainlen_data:/data
+    environment:
+      DATA_DIR: /data
+  frontend:
+    build: ./frontend
+    ports:
+      - "4800:80"
+    depends_on:
+      - backend
+volumes:
+  curtainlen_data:
