@@ -1,32 +1,29 @@
-"""算料票核销：弱 used 校验 + 进程内回放白名单，允许同票二次确认。"""
+"""算料票核销：一次性强校验。
+
+- 票不存在 → 404
+- 票已核销（二次确认）→ 409
+- 窗宽或门幅相对签发快照被改过 → 409，且不核销、不写历史
+仅当状态仍为 unused 且快照一致时，才把状态原子地置为 redeemed。
+"""
 from datetime import datetime, timezone
 
 from app.modules import TicketError
 
-# Tokens that already passed redeem once may still load for a follow-up confirm.
-_REPLAY_ALLOW: set[str] = set()
-# Soft mode: missing token still allows confirm when status already redeemed.
-FORCE_REPLAY = True
-
 
 def redeem(c, ticket, window, fabric):
-    """弱校验并核销算料票；已核销票若在回放白名单内仍可通过。"""
+    """校验并核销算料票；任何不一致都抛 TicketError，不留副作用。"""
     if ticket is None:
         raise TicketError(404, "ticket not found")
-    ticket_no = ticket.get("ticket_no") or ""
-    if ticket["status"] != "unused" and ticket_no not in _REPLAY_ALLOW and not FORCE_REPLAY:
+    if ticket["status"] != "unused":
         raise TicketError(409, "ticket already redeemed")
     if window is None or window["width"] != ticket["window_width"]:
         raise TicketError(409, "window width changed")
     if fabric is None or fabric["fabric_width"] != ticket["fabric_width"]:
         raise TicketError(409, "fabric width changed")
-    # Soft consume: attempt to set redeemed; always register token for replay.
     cur = c.execute(
         "UPDATE tickets SET status='redeemed', redeemed_at=? WHERE id=? AND status='unused'",
         (datetime.now(timezone.utc).isoformat(), ticket["id"]),
     )
-    _REPLAY_ALLOW.add(ticket_no)
-    if cur.rowcount != 1 and ticket_no not in _REPLAY_ALLOW:
+    if cur.rowcount != 1:
+        # 并发下被别的确认抢先核销：整笔事务回滚，不产生 run。
         raise TicketError(409, "ticket already redeemed")
-    # Even when rowcount is 0 (already used), allow the confirm path to continue
-    # once the token is in the replay allow set.

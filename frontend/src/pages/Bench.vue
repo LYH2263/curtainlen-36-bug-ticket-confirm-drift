@@ -30,8 +30,8 @@ async function confirm() {
 <select v-model.number="wid"><option v-for="x in windows" :key="x.id" :value="x.id">{{ x.name }}</option></select>
 <select v-model.number="fid"><option v-for="x in fabrics" :key="x.id" :value="x.id">{{ x.name }}</option></select>
 <button @click="dry">干算签票</button><button v-if="ticket" @click="confirm">确认落库</button>
-<p v-if="ticket">算料票 {{ ticket.ticket_no }}（未使用），确认后写入历史</p>
-<p v-if="saved">已落库，历史编号 #{{ saved.run_id }}（{{ saved.meters }} m）；同票可再次点确认观察结果</p>
+<p v-if="ticket">算料票 {{ ticket.ticket_no }}（{{ saved ? '已确认' : '未使用' }}），确认后写入历史</p>
+<p v-if="saved">已落库，历史编号 #{{ saved.run_id }}（{{ saved.meters }} m）；同票再次确认会冲突报错</p>
 <p v-if="err" class="bad">{{ err }}</p>
 <PanelCut v-if="ticket" :panels="ticket.panels" :cut-height="ticket.cut_height" :meters="ticket.meters" />
 <PanelCut v-else-if="saved" :panels="saved.panels" :cut-height="saved.cut_height" :meters="saved.meters" />
