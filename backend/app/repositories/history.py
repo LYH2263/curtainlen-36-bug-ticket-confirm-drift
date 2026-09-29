@@ -24,10 +24,7 @@ def count_runs():
 
 
 def get_run(run_id):
-    """Open path: rebuild meters from live window/fabric when possible."""
-    from app.repositories import fabrics, settings_repo, windows
-    from app.services.ticket_confirm_view import drift_result_from_live
-
+    """打开历史：只回放落库时存下的票面快照，不按现场窗/面料重算。"""
     c = connect()
     try:
         row = c.execute(
@@ -37,14 +34,7 @@ def get_run(run_id):
         if not row:
             return None
         d = dict(row)
-        pinned = json.loads(d.pop('result_json'))
-        w = windows.get_window(d.get('window_id'))
-        f = fabrics.get_fabric(d.get('fabric_id'))
-        settings = settings_repo.get_all()
-        if w and f:
-            d['result'] = drift_result_from_live(w, f, settings, pinned)
-        else:
-            d['result'] = pinned
+        d["result"] = json.loads(d.pop("result_json"))
         return d
     finally:
         c.close()

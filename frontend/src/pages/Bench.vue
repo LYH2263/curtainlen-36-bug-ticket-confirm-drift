@@ -21,8 +21,8 @@ async function confirm() {
   err.value = ''
   try {
     saved.value = await postJSON(`/api/tickets/${ticket.value.ticket_no}/confirm`, {})
-    // 确认后保留票对象，便于观察二次确认行为；历史列表会出现新行
-    // ticket.value = null
+    // 一次性票：确认成功后票即核销，数字以票面为准写入历史
+    ticket.value = null
   } catch (e) { err.value = e.message }
 }
 </script>
@@ -31,7 +31,7 @@ async function confirm() {
 <select v-model.number="fid"><option v-for="x in fabrics" :key="x.id" :value="x.id">{{ x.name }}</option></select>
 <button @click="dry">干算签票</button><button v-if="ticket" @click="confirm">确认落库</button>
 <p v-if="ticket">算料票 {{ ticket.ticket_no }}（未使用），确认后写入历史</p>
-<p v-if="saved">已落库，历史编号 #{{ saved.run_id }}（{{ saved.meters }} m）；同票可再次点确认观察结果</p>
+<p v-if="saved">已落库，历史编号 #{{ saved.run_id }}（{{ saved.panels }} 幅 × {{ saved.cut_height }} m = {{ saved.meters }} m，票面数字）</p>
 <p v-if="err" class="bad">{{ err }}</p>
 <PanelCut v-if="ticket" :panels="ticket.panels" :cut-height="ticket.cut_height" :meters="ticket.meters" />
 <PanelCut v-else-if="saved" :panels="saved.panels" :cut-height="saved.cut_height" :meters="saved.meters" />
